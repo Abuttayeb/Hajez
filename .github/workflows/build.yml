@@ -1,51 +1,13 @@
-name: Build Flutter APK
+- name: Create key.properties
+  run: |
+    echo "storePassword=${{ secrets.KEY_STORE_PASSWORD }}" > android/key.properties
+    echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+    echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+    echo "storeFile=app/hajez-release.jks" >> android/key.properties
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+- name: Decode keystore
+  run: |
+    echo "${{ secrets.KEY_STORE }}" | base64 --decode > android/app/hajez-release.jks
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.0'
-          channel: 'stable'
-
-      - name: Decode Keystore
-        run: |
-          echo "${{ secrets.KEY_STORE }}" | base64 --decode > hajez_flutter/android/app/hajez-release.jks
-
-      - name: Get dependencies
-        working-directory: hajez_flutter
-        run: flutter pub get
-
-      - name: Build Release APK
-        working-directory: hajez_flutter
-        env:
-          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          flutter build apk --release \
-            --dart-define=KEY_STORE_PASSWORD=$KEY_STORE_PASSWORD \
-            --dart-define=KEY_ALIAS=$KEY_ALIAS \
-            --dart-define=KEY_PASSWORD=$KEY_PASSWORD
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: hajez-release-apk
-          path: hajez_flutter/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
+- name: Build APK
+  run: flutter build apk --release
