@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\FarmController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\FcmController;
 
 Route::post('/register',[AuthController::class,'register']);
 Route::post('/login',[AuthController::class,'login']);
@@ -32,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('/my-bookings/{id}',[BookingController::class,'show']);
     Route::post('/my-bookings/{id}/cancel',[BookingController::class,'cancel']);
     Route::post('/reviews',[ReviewController::class,'store']);
+    Route::post('/fcm-token', [FcmController::class, 'update']);
 
     Route::middleware('role:owner')->group(function() {
         Route::get('/my-farms',[FarmController::class,'myFarms']);
