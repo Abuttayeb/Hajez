@@ -4,6 +4,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Farm;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 
 class BookingController extends Controller
@@ -17,8 +18,32 @@ class BookingController extends Controller
             return response()->json(['message'=>'عدد الأشخاص يتجاوز السعة'],422);
         $nights = Carbon::parse($request->check_in)->diffInDays($request->check_out);
         $booking = Booking::create(['user_id'=>$request->user()->id,'farm_id'=>$request->farm_id,'check_in'=>$request->check_in,'check_out'=>$request->check_out,'guests'=>$request->guests,'total_price'=>$nights*$farm->price_per_night,'payment_method'=>$request->payment_method??'cash','notes'=>$request->notes]);
+
+        // إشعار المالك
+        $owner = $farm->owner;
+        if ($owner && $owner->fcm_token) {
+            $this->sendFcmNotification(
+                $owner->fcm_token,
+                'حجز جديد! 🎉',
+                "تم حجز {$farm->name} من {$request->check_in} إلى {$request->check_out}"
+            );
+        }
+
         return response()->json(['message'=>'تم الحجز بنجاح','booking'=>$booking->load(['farm','user'])],201);
     }
+
+    private function sendFcmNotification(string $token, string $title, string $body): void {
+        $serverKey = env('FCM_SERVER_KEY');
+        if (!$serverKey) return;
+        Http::withHeaders([
+            'Authorization' => 'key=' . $serverKey,
+            'Content-Type' => 'application/json',
+        ])->post('https://fcm.googleapis.com/fcm/send', [
+            'to' => $token,
+            'notification' => ['title' => $title, 'body' => $body],
+        ]);
+    }
+
     public function myBookings(Request $request) {
         return response()->json(Booking::with(['farm.images','farm.owner','review'])->where('user_id',$request->user()->id)->latest()->get());
     }
