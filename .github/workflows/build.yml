@@ -35,7 +35,7 @@ jobs:
           echo "storePassword=${{ secrets.KEY_STORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=app/hajez-release.jks" >> android/key.properties
+          echo "storeFile=hajez-release.jks" >> android/key.properties
 
       - name: Decode keystore
         working-directory: hajez_flutter
