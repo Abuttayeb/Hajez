@@ -9,5 +9,5 @@ name: Decode keystore
   run: |
     echo "${{ secrets.KEY_STORE }}" | base64 --decode > android/app/hajez-release.jks
 
-- name: Build APK
+name: Build APK
   run: flutter build apk --release
