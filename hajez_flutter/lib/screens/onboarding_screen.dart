@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'utils/app_theme.dart';
+import '../utils/app_theme.dart';  // صح - يرجع خطوة للـ lib/
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
