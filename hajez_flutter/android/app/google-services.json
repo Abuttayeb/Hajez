@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "488491938153",
+    "project_id": "hajez-9224d",
+    "storage_bucket": "hajez-9224d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:488491938153:android:5f166aa3c0ea609fd7cdf8",
+        "android_client_info": {
+          "package_name": "com.hajez.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsIfmfkJNpL1lMQ5RuraUXdi8KEriYXe0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
