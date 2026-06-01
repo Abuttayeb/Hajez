@@ -71,7 +71,8 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   Widget build(BuildContext context) {
     final nights = (_checkIn != null && _checkOut != null) ? _checkOut!.difference(_checkIn!).inDays : 0;
-    final total = nights * (widget.farm['price_per_night'] as num).toDouble();
+    final price = double.tryParse(widget.farm['price_per_night'].toString()) ?? 0.0;
+    final total = nights * price;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: Text('حجز ${widget.farm['name']}')),
@@ -124,7 +125,10 @@ class _BookingScreenState extends State<BookingScreen> {
                   Row(children: [
                     IconButton(onPressed: () { if (_guests > 1) setState(() => _guests--); }, icon: const Icon(Icons.remove_circle_outline, color: AppColors.primary)),
                     Text('$_guests', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
-                    IconButton(onPressed: () { if (_guests < widget.farm['capacity']) setState(() => _guests++); }, icon: const Icon(Icons.add_circle_outline, color: AppColors.primary)),
+                    IconButton(onPressed: () {
+                      final capacity = int.tryParse(widget.farm['capacity'].toString()) ?? 100;
+                      if (_guests < capacity) setState(() => _guests++);
+                    }, icon: const Icon(Icons.add_circle_outline, color: AppColors.primary)),
                   ]),
                 ]),
               ),
