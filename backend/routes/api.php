@@ -1,4 +1,15 @@
 <?php
+use Illuminate\Support\Facades\Artisan;
+
+Route::get('/setup', function() {
+    try {
+        Artisan::call('migrate', ['--force' => true]);
+        Artisan::call('db:seed', ['--force' => true]);
+        return response()->json(['message' => 'Done! ✅', 'output' => Artisan::output()]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FarmController;
