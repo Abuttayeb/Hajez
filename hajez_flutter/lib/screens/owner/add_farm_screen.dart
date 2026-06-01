@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../utils/app_theme.dart';
 import '../../services/farm_service.dart';
 
@@ -13,6 +15,9 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
   final _pageCtrl = PageController();
   int _step = 0;
   bool _loading = false;
+  int? _savedFarmId;
+  List<XFile> _selectedImages = [];
+  bool _uploadingImages = false;
 
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
@@ -37,6 +42,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
   void initState() {
     super.initState();
     if (_isEdit) {
+      _savedFarmId = widget.farm!['id'];
       _nameCtrl.text = widget.farm!['name'] ?? '';
       _descCtrl.text = widget.farm!['description'] ?? '';
       _city = widget.farm!['city'] ?? 'عمان';
@@ -65,13 +71,57 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
         'check_out_time': '${_checkOut.hour.toString().padLeft(2,'0')}:${_checkOut.minute.toString().padLeft(2,'0')}',
       };
       Map<String,dynamic> res;
-      if (_isEdit) { res = await FarmService.updateFarm(widget.farm!['id'], data); }
-      else { res = await FarmService.createFarm(data); }
+      if (_isEdit) {
+        res = await FarmService.updateFarm(widget.farm!['id'], data);
+      } else {
+        res = await FarmService.createFarm(data);
+        if (res['farm'] != null) {
+          _savedFarmId = res['farm']['id'];
+        }
+      }
       if (res['farm'] != null) {
-        if (mounted) { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isEdit ? 'تم التحديث ✅' : 'تمت الإضافة ✅', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.success)); }
-      } else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'خطأ', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.error)); }
-    } catch (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر الاتصال', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.error)); }
+        setState(() => _step = 2);
+        _pageCtrl.jumpToPage(2);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'خطأ', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.error));
+      }
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر الاتصال', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.error));
+    }
     setState(() => _loading = false);
+  }
+
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage(imageQuality: 80);
+    if (images.isNotEmpty) setState(() => _selectedImages.addAll(images));
+  }
+
+  Future<void> _uploadImages() async {
+    if (_savedFarmId == null || _selectedImages.isEmpty) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
+    setState(() => _uploadingImages = true);
+    try {
+      for (int i = 0; i < _selectedImages.length; i++) {
+        await FarmService.uploadFarmImage(
+          farmId: _savedFarmId!,
+          imageFile: File(_selectedImages[i].path),
+          isCover: i == 0,
+        );
+      }
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_isEdit ? 'تم التحديث ✅' : 'تمت الإضافة ✅', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر رفع الصور', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.error));
+    }
+    setState(() => _uploadingImages = false);
   }
 
   @override
@@ -80,19 +130,30 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(_isEdit ? 'تعديل المزرعة' : 'إضافة مزرعة'),
-        bottom: PreferredSize(preferredSize: const Size.fromHeight(6),
-          child: LinearProgressIndicator(value: (_step + 1) / 3, backgroundColor: AppColors.greyLight, color: AppColors.primary)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(6),
+          child: LinearProgressIndicator(value: (_step + 1) / 3, backgroundColor: AppColors.greyLight, color: AppColors.primary),
+        ),
       ),
       body: PageView(controller: _pageCtrl, physics: const NeverScrollableScrollPhysics(), children: [_step1(), _step2(), _step3()]),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
         child: Row(children: [
-          if (_step > 0) Expanded(child: OutlinedButton(onPressed: () { setState(() => _step--); _pageCtrl.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut); }, child: const Text('رجوع'))),
-          if (_step > 0) const SizedBox(width: 12),
-          Expanded(child: _step < 2
-              ? ElevatedButton(onPressed: () { setState(() => _step++); _pageCtrl.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut); }, child: const Text('التالي'))
-              : _loading ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : ElevatedButton(onPressed: _save, child: Text(_isEdit ? 'حفظ التعديلات' : 'إضافة المزرعة'))),
+          if (_step > 0 && _step < 2) Expanded(child: OutlinedButton(
+            onPressed: () { setState(() => _step--); _pageCtrl.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut); },
+            child: const Text('رجوع'),
+          )),
+          if (_step > 0 && _step < 2) const SizedBox(width: 12),
+          if (_step < 2) Expanded(child: _step < 1
+            ? ElevatedButton(onPressed: () { setState(() => _step++); _pageCtrl.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut); }, child: const Text('التالي'))
+            : _loading
+              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              : ElevatedButton(onPressed: _save, child: Text(_isEdit ? 'حفظ التعديلات' : 'إضافة المزرعة')),
+          ),
+          if (_step == 2) Expanded(child: _uploadingImages
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : ElevatedButton(onPressed: _uploadImages, child: Text(_selectedImages.isEmpty ? 'تخطي' : 'رفع الصور وإنهاء')),
+          ),
         ]),
       ),
     );
@@ -134,12 +195,62 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
     Row(children: [Expanded(child: _timePicker('وقت الدخول', _checkIn, (t) => setState(() => _checkIn = t))), const SizedBox(width: 12), Expanded(child: _timePicker('وقت الخروج', _checkOut, (t) => setState(() => _checkOut = t)))]),
   ]));
 
-  Widget _step3() => SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    const Text('القواعد والمرافق', style: AppText.heading2), const SizedBox(height: 20),
-    TextFormField(controller: _rulesCtrl, maxLines: 4, decoration: const InputDecoration(labelText: 'قواعد المزرعة (اختياري)', hintText: 'مثال: عائلات فقط، ممنوع التدخين...', prefixIcon: Icon(Icons.rule, color: AppColors.primary))),
-    const SizedBox(height: 16),
-    const Text('يمكنك إضافة المرافق بعد إنشاء المزرعة', style: AppText.bodyGrey),
-  ]));
+  Widget _step3() => SingleChildScrollView(
+    padding: const EdgeInsets.all(20),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('صور المزرعة', style: AppText.heading2),
+      const SizedBox(height: 8),
+      const Text('أضف صوراً لمزرعتك — الصورة الأولى ستكون الغلاف', style: AppText.bodyGrey),
+      const SizedBox(height: 20),
+      GestureDetector(
+        onTap: _pickImages,
+        child: Container(
+          width: double.infinity, height: 120,
+          decoration: BoxDecoration(color: AppColors.greyLight, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5, style: BorderStyle.solid)),
+          child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.add_photo_alternate_outlined, size: 40, color: AppColors.primary),
+            SizedBox(height: 8),
+            Text('اضغط لاختيار الصور', style: TextStyle(fontFamily: 'Cairo', color: AppColors.primary, fontWeight: FontWeight.w500)),
+          ]),
+        ),
+      ),
+      if (_selectedImages.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        Text('${_selectedImages.length} صور مختارة', style: const TextStyle(fontFamily: 'Cairo', color: AppColors.primary, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _selectedImages.length,
+            itemBuilder: (_, i) => Stack(children: [
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                width: 100, height: 100,
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(File(_selectedImages[i].path), fit: BoxFit.cover),
+                ),
+              ),
+              if (i == 0) Positioned(top: 4, right: 4, child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+                child: const Text('غلاف', style: TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'Cairo')),
+              )),
+              Positioned(top: 4, left: 12, child: GestureDetector(
+                onTap: () => setState(() => _selectedImages.removeAt(i)),
+                child: Container(width: 22, height: 22, decoration: BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                  child: const Icon(Icons.close, size: 14, color: Colors.white)),
+              )),
+            ]),
+          ),
+        ),
+      ],
+      const SizedBox(height: 16),
+      TextFormField(controller: _rulesCtrl, maxLines: 4, decoration: const InputDecoration(labelText: 'قواعد المزرعة (اختياري)', hintText: 'مثال: عائلات فقط، ممنوع التدخين...', prefixIcon: Icon(Icons.rule, color: AppColors.primary))),
+    ]),
+  );
 
   Widget _field(TextEditingController ctrl, String label, IconData icon, {bool isNumber = false}) => TextFormField(
     controller: ctrl, keyboardType: isNumber ? TextInputType.number : TextInputType.text,
