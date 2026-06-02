@@ -13,6 +13,14 @@ class FarmCard extends StatelessWidget {
     return 'https://hajez.esnaad-sa.com$url';
   }
 
+  bool get _isFeatured {
+    if (farm['is_featured'] != true) return false;
+    final until = farm['featured_until'];
+    if (until == null) return true;
+    try { return DateTime.parse(until.toString()).isAfter(DateTime.now()); }
+    catch (_) { return false; }
+  }
+
   @override
   Widget build(BuildContext context) {
     final reviews = farm['reviews'] as List? ?? [];
@@ -28,11 +36,18 @@ class FarmCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 6))],
+          border: _isFeatured ? Border.all(color: const Color(0xFFFFB300), width: 2) : null,
+          boxShadow: [
+            BoxShadow(
+              color: _isFeatured ? const Color(0xFFFFB300).withOpacity(0.25) : AppColors.primary.withOpacity(0.08),
+              blurRadius: _isFeatured ? 24 : 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
             child: Stack(children: [
               coverImage != null && coverImage.isNotEmpty
                   ? CachedNetworkImage(imageUrl: coverImage, height: 200, width: double.infinity, fit: BoxFit.cover,
@@ -41,13 +56,29 @@ class FarmCard extends StatelessWidget {
                   : _placeholder(),
               Positioned(bottom: 0, left: 0, right: 0,
                 child: Container(height: 80, decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black.withOpacity(0.5), Colors.transparent])))),
-              Positioned(top: 12, right: 12,
+
+              // شارة مميزة
+              if (_isFeatured)
+                Positioned(top: 0, left: 0, right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(colors: [Color(0xFFFFB300), Color(0xFFFF6F00)]),
+                    ),
+                    child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(Icons.star_rounded, color: Colors.white, size: 14),
+                      SizedBox(width: 4),
+                      Text('مزرعة مميزة', style: TextStyle(color: Colors.white, fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+                    ]),
+                  )),
+
+              Positioned(top: _isFeatured ? 38 : 12, right: 12,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(color: AppColors.primaryDark.withOpacity(0.85), borderRadius: BorderRadius.circular(20)),
                   child: Text(_typeLabel(farm['type']), style: const TextStyle(color: AppColors.white, fontSize: 11, fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
                 )),
-              Positioned(top: 12, left: 12,
+              Positioned(top: _isFeatured ? 38 : 12, left: 12,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(20)),
@@ -72,7 +103,10 @@ class FarmCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(farm['name'] ?? '', style: AppText.heading3, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Row(children: [
+                Expanded(child: Text(farm['name'] ?? '', style: AppText.heading3, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                if (_isFeatured) const Icon(Icons.verified_rounded, color: Color(0xFFFFB300), size: 18),
+              ]),
               const SizedBox(height: 6),
               Row(children: [
                 const Icon(Icons.location_on_rounded, size: 14, color: AppColors.primary),
