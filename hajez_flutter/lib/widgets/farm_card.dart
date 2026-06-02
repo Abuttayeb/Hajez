@@ -7,12 +7,19 @@ class FarmCard extends StatelessWidget {
   final VoidCallback onTap;
   const FarmCard({super.key, required this.farm, required this.onTap});
 
+  String _fixUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    return 'https://hajez.esnaad-sa.com$url';
+  }
+
   @override
   Widget build(BuildContext context) {
     final reviews = farm['reviews'] as List? ?? [];
     final avgRating = reviews.isEmpty ? 0.0 : reviews.fold<double>(0, (s, r) => s + (r['rating'] ?? 0)) / reviews.length;
     final images = farm['images'] as List? ?? [];
-    final coverImage = farm['cover_image'] ?? (images.isNotEmpty ? images[0]['image_path'] : null);
+    final rawCover = farm['cover_image'] ?? (images.isNotEmpty ? images[0]['image_path'] : null);
+    final coverImage = rawCover != null ? _fixUrl(rawCover.toString()) : null;
 
     return GestureDetector(
       onTap: onTap,
@@ -27,7 +34,7 @@ class FarmCard extends StatelessWidget {
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: Stack(children: [
-              coverImage != null
+              coverImage != null && coverImage.isNotEmpty
                   ? CachedNetworkImage(imageUrl: coverImage, height: 200, width: double.infinity, fit: BoxFit.cover,
                       placeholder: (_, __) => Container(height: 200, color: AppColors.greyLight, child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))),
                       errorWidget: (_, __, ___) => _placeholder())
