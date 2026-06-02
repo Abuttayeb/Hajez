@@ -27,6 +27,12 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
     catch (_) { setState(() => _loading = false); }
   }
 
+  String _fixUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    return 'https://hajez.esnaad-sa.com$url';
+  }
+
   void _openWhatsApp() async {
     final phone = _farm?['whatsapp'] ?? '';
     if (phone.isEmpty) return;
@@ -55,7 +61,11 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
     if (_farm == null) return const Scaffold(body: Center(child: Text('حدث خطأ', style: TextStyle(fontFamily: 'Cairo'))));
 
-    final images = [if (_farm!['cover_image'] != null) _farm!['cover_image'], ...(_farm!['images'] as List? ?? []).map((i) => i['image_path'])].toSet().toList();
+    final rawImages = [
+      if (_farm!['cover_image'] != null) _fixUrl(_farm!['cover_image'].toString()),
+      ...(_farm!['images'] as List? ?? []).map((i) => _fixUrl(i['image_path']?.toString())).where((u) => u.isNotEmpty),
+    ].toSet().toList();
+
     final reviews = _farm!['reviews'] as List? ?? [];
     final avgRating = reviews.isEmpty ? 0.0 : reviews.fold<double>(0, (s, r) => s + (r['rating'] ?? 0)) / reviews.length;
     final amenities = _farm!['amenities'] as List? ?? [];
@@ -71,19 +81,19 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
           expandedHeight: 300, pinned: true, backgroundColor: AppColors.primaryDark,
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(children: [
-              if (images.isNotEmpty)
+              if (rawImages.isNotEmpty)
                 PageView.builder(
-                  itemCount: images.length,
+                  itemCount: rawImages.length,
                   onPageChanged: (i) => setState(() => _currentImage = i),
-                  itemBuilder: (_, i) => CachedNetworkImage(imageUrl: images[i], fit: BoxFit.cover,
+                  itemBuilder: (_, i) => CachedNetworkImage(imageUrl: rawImages[i], fit: BoxFit.cover,
                     placeholder: (_, __) => Container(color: AppColors.greyLight),
                     errorWidget: (_, __, ___) => Container(color: AppColors.greyLight, child: const Icon(Icons.home_work_outlined, size: 60, color: AppColors.grey))),
                 )
               else Container(color: AppColors.greyLight, child: const Center(child: Icon(Icons.home_work_outlined, size: 80, color: AppColors.grey))),
-              if (images.length > 1)
+              if (rawImages.length > 1)
                 Positioned(bottom: 16, left: 0, right: 0,
                   child: Row(mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(images.length, (i) => AnimatedContainer(
+                    children: List.generate(rawImages.length, (i) => AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       width: _currentImage == i ? 20 : 6, height: 6,
@@ -147,7 +157,7 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
                   )).toList()),
               ],
 
-              // ── الموقع ──
+              // الموقع
               if (hasLocation) ...[
                 const SizedBox(height: 24),
                 const Text('الموقع', style: AppText.heading3),
@@ -161,8 +171,7 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
                       children: [
                         TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.hajez.app'),
                         MarkerLayer(markers: [
-                          Marker(point: LatLng(lat, lng), width: 40, height: 40,
-                            child: const Icon(Icons.location_pin, color: AppColors.primary, size: 40)),
+                          Marker(point: LatLng(lat, lng), width: 40, height: 40, child: const Icon(Icons.location_pin, color: AppColors.primary, size: 40)),
                         ]),
                       ],
                     ),
