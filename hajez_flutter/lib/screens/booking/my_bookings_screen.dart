@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../utils/app_theme.dart';
 import '../../services/farm_service.dart';
 import 'booking_detail_screen.dart';
@@ -79,6 +80,12 @@ class _BookingCard extends StatelessWidget {
   final VoidCallback onTap;
   const _BookingCard({required this.booking, required this.onTap});
 
+  String _fixUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    return 'https://hajez.esnaad-sa.com$url';
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = booking['status'] ?? 'pending';
@@ -89,6 +96,9 @@ class _BookingCard extends StatelessWidget {
       'completed': {'label': 'مكتمل', 'color': AppColors.primary},
     }[status] ?? {'label': '', 'color': AppColors.grey};
     final farm = booking['farm'] ?? {};
+    final images = farm['images'] as List? ?? [];
+    final rawCover = farm['cover_image'] ?? (images.isNotEmpty ? images[0]['image_path'] : null);
+    final coverImage = rawCover != null ? _fixUrl(rawCover.toString()) : null;
 
     return GestureDetector(
       onTap: onTap,
@@ -96,10 +106,15 @@ class _BookingCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(18)),
         child: Column(children: [
-          if (farm['cover_image'] != null)
+          if (coverImage != null && coverImage.isNotEmpty)
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-              child: Image.network(farm['cover_image'], height: 130, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(height: 130, color: AppColors.greyLight)),
+              child: CachedNetworkImage(
+                imageUrl: coverImage,
+                height: 130, width: double.infinity, fit: BoxFit.cover,
+                placeholder: (_, __) => Container(height: 130, color: AppColors.greyLight),
+                errorWidget: (_, __, ___) => Container(height: 130, color: AppColors.greyLight),
+              ),
             ),
           Padding(
             padding: const EdgeInsets.all(14),
