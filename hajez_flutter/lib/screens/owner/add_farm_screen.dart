@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../utils/app_theme.dart';
 import '../../services/farm_service.dart';
 
@@ -18,6 +20,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
   int? _savedFarmId;
   List<XFile> _selectedImages = [];
   bool _uploadingImages = false;
+  LatLng? _selectedLocation;
 
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
@@ -36,6 +39,20 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
   final List<String> _cities = ['عمان','إربد','الزرقاء','السلط','الكرك','العقبة','جرش','عجلون','مادبا','البحر الميت'];
   final List<Map<String,String>> _types = [{'value':'farm','label':'مزرعة'},{'value':'chalet','label':'شاليه'},{'value':'villa','label':'فيلا'},{'value':'resort','label':'منتجع'}];
 
+  // مراكز المدن الأردنية
+  static const Map<String, LatLng> _cityCenters = {
+    'عمان': LatLng(31.9454, 35.9284),
+    'إربد': LatLng(32.5556, 35.8500),
+    'الزرقاء': LatLng(32.0728, 36.0878),
+    'السلط': LatLng(32.0392, 35.7278),
+    'الكرك': LatLng(31.1853, 35.7048),
+    'العقبة': LatLng(29.5267, 35.0062),
+    'جرش': LatLng(32.2792, 35.8994),
+    'عجلون': LatLng(32.3325, 35.7517),
+    'مادبا': LatLng(31.7167, 35.7833),
+    'البحر الميت': LatLng(31.5590, 35.4732),
+  };
+
   bool get _isEdit => widget.farm != null;
 
   @override
@@ -53,6 +70,9 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
       _hasPool = widget.farm!['has_pool'] ?? false;
       _whatsappCtrl.text = widget.farm!['whatsapp'] ?? '';
       _rulesCtrl.text = widget.farm!['rules'] ?? '';
+      final lat = double.tryParse(widget.farm!['latitude']?.toString() ?? '');
+      final lng = double.tryParse(widget.farm!['longitude']?.toString() ?? '');
+      if (lat != null && lng != null) _selectedLocation = LatLng(lat, lng);
     }
   }
 
@@ -69,15 +89,15 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
         'whatsapp': _whatsappCtrl.text.trim(), 'rules': _rulesCtrl.text.trim(),
         'check_in_time': '${_checkIn.hour.toString().padLeft(2,'0')}:${_checkIn.minute.toString().padLeft(2,'0')}',
         'check_out_time': '${_checkOut.hour.toString().padLeft(2,'0')}:${_checkOut.minute.toString().padLeft(2,'0')}',
+        if (_selectedLocation != null) 'latitude': _selectedLocation!.latitude,
+        if (_selectedLocation != null) 'longitude': _selectedLocation!.longitude,
       };
       Map<String,dynamic> res;
       if (_isEdit) {
         res = await FarmService.updateFarm(widget.farm!['id'], data);
       } else {
         res = await FarmService.createFarm(data);
-        if (res['farm'] != null) {
-          _savedFarmId = res['farm']['id'];
-        }
+        if (res['farm'] != null) _savedFarmId = res['farm']['id'];
       }
       if (res['farm'] != null) {
         setState(() => _step = 2);
@@ -105,18 +125,11 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
     setState(() => _uploadingImages = true);
     try {
       for (int i = 0; i < _selectedImages.length; i++) {
-        await FarmService.uploadFarmImage(
-          farmId: _savedFarmId!,
-          imageFile: File(_selectedImages[i].path),
-          isCover: i == 0,
-        );
+        await FarmService.uploadFarmImage(farmId: _savedFarmId!, imageFile: File(_selectedImages[i].path), isCover: i == 0);
       }
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEdit ? 'تم التحديث ✅' : 'تمت الإضافة ✅', style: const TextStyle(fontFamily: 'Cairo')),
-          backgroundColor: AppColors.success,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isEdit ? 'تم التحديث ✅' : 'تمت الإضافة ✅', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.success));
       }
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر رفع الصور', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.error));
@@ -193,6 +206,41 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
       ])),
     const SizedBox(height: 14),
     Row(children: [Expanded(child: _timePicker('وقت الدخول', _checkIn, (t) => setState(() => _checkIn = t))), const SizedBox(width: 12), Expanded(child: _timePicker('وقت الخروج', _checkOut, (t) => setState(() => _checkOut = t)))]),
+    const SizedBox(height: 20),
+
+    // ── الموقع ──
+    const Text('الموقع على الخريطة', style: AppText.heading3),
+    const SizedBox(height: 6),
+    Text(_selectedLocation != null ? 'تم تحديد الموقع ✓' : 'اضغط على الخريطة لتحديد موقع المزرعة (اختياري)', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: _selectedLocation != null ? AppColors.success : AppColors.grey)),
+    const SizedBox(height: 10),
+    ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        height: 220,
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: _selectedLocation ?? (_cityCenters[_city] ?? const LatLng(31.9454, 35.9284)),
+            initialZoom: 12,
+            onTap: (_, point) => setState(() => _selectedLocation = point),
+          ),
+          children: [
+            TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.hajez.app'),
+            if (_selectedLocation != null)
+              MarkerLayer(markers: [
+                Marker(point: _selectedLocation!, width: 40, height: 40, child: const Icon(Icons.location_pin, color: AppColors.primary, size: 40)),
+              ]),
+          ],
+        ),
+      ),
+    ),
+    if (_selectedLocation != null) ...[
+      const SizedBox(height: 8),
+      TextButton.icon(
+        onPressed: () => setState(() => _selectedLocation = null),
+        icon: const Icon(Icons.clear, size: 16, color: AppColors.error),
+        label: const Text('مسح الموقع', style: TextStyle(fontFamily: 'Cairo', color: AppColors.error, fontSize: 12)),
+      ),
+    ],
   ]));
 
   Widget _step3() => SingleChildScrollView(
@@ -206,7 +254,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
         onTap: _pickImages,
         child: Container(
           width: double.infinity, height: 120,
-          decoration: BoxDecoration(color: AppColors.greyLight, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5, style: BorderStyle.solid)),
+          decoration: BoxDecoration(color: AppColors.greyLight, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5)),
           child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(Icons.add_photo_alternate_outlined, size: 40, color: AppColors.primary),
             SizedBox(height: 8),
@@ -225,13 +273,8 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
             itemCount: _selectedImages.length,
             itemBuilder: (_, i) => Stack(children: [
               Container(
-                margin: const EdgeInsets.only(left: 8),
-                width: 100, height: 100,
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(File(_selectedImages[i].path), fit: BoxFit.cover),
-                ),
+                margin: const EdgeInsets.only(left: 8), width: 100, height: 100,
+                child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(_selectedImages[i].path), fit: BoxFit.cover)),
               ),
               if (i == 0) Positioned(top: 4, right: 4, child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -240,8 +283,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
               )),
               Positioned(top: 4, left: 12, child: GestureDetector(
                 onTap: () => setState(() => _selectedImages.removeAt(i)),
-                child: Container(width: 22, height: 22, decoration: BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                  child: const Icon(Icons.close, size: 14, color: Colors.white)),
+                child: Container(width: 22, height: 22, decoration: BoxDecoration(color: AppColors.error, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white)),
               )),
             ]),
           ),
