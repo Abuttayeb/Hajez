@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../utils/app_theme.dart';
 import '../../services/farm_service.dart';
 import '../booking/booking_screen.dart';
@@ -32,6 +34,22 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
     if (await canLaunchUrl(Uri.parse(url))) launchUrl(Uri.parse(url));
   }
 
+  void _openMaps() async {
+    final lat = _farm?['latitude'];
+    final lng = _farm?['longitude'];
+    if (lat == null || lng == null) return;
+    final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    if (await canLaunchUrl(Uri.parse(url))) launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
+  void _openWaze() async {
+    final lat = _farm?['latitude'];
+    final lng = _farm?['longitude'];
+    if (lat == null || lng == null) return;
+    final url = 'https://waze.com/ul?ll=$lat,$lng&navigate=yes';
+    if (await canLaunchUrl(Uri.parse(url))) launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
@@ -41,6 +59,10 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
     final reviews = _farm!['reviews'] as List? ?? [];
     final avgRating = reviews.isEmpty ? 0.0 : reviews.fold<double>(0, (s, r) => s + (r['rating'] ?? 0)) / reviews.length;
     final amenities = _farm!['amenities'] as List? ?? [];
+
+    final double? lat = _farm!['latitude'] != null ? double.tryParse(_farm!['latitude'].toString()) : null;
+    final double? lng = _farm!['longitude'] != null ? double.tryParse(_farm!['longitude'].toString()) : null;
+    final hasLocation = lat != null && lng != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -124,6 +146,46 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
                     child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.check_circle_outline, size: 14, color: AppColors.primaryDark), const SizedBox(width: 6), Text(a['name'] ?? '', style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: AppColors.primaryDark))]),
                   )).toList()),
               ],
+
+              // ── الموقع ──
+              if (hasLocation) ...[
+                const SizedBox(height: 24),
+                const Text('الموقع', style: AppText.heading3),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    height: 200,
+                    child: FlutterMap(
+                      options: MapOptions(initialCenter: LatLng(lat!, lng!), initialZoom: 14, interactionOptions: const InteractionOptions(flags: InteractiveFlag.none)),
+                      children: [
+                        TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.hajez.app'),
+                        MarkerLayer(markers: [
+                          Marker(point: LatLng(lat, lng), width: 40, height: 40,
+                            child: const Icon(Icons.location_pin, color: AppColors.primary, size: 40)),
+                        ]),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: OutlinedButton.icon(
+                    onPressed: _openMaps,
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: const Text('Google Maps', style: TextStyle(fontFamily: 'Cairo')),
+                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, side: const BorderSide(color: AppColors.primary)),
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: OutlinedButton.icon(
+                    onPressed: _openWaze,
+                    icon: const Icon(Icons.navigation_outlined, size: 18),
+                    label: const Text('Waze', style: TextStyle(fontFamily: 'Cairo')),
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.blue, side: const BorderSide(color: Colors.blue)),
+                  )),
+                ]),
+              ],
+
               if (reviews.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 Row(children: [
