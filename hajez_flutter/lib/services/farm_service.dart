@@ -40,7 +40,7 @@ class FarmService {
     }
   }
 
-  static Future<Map<String, dynamic>> createBooking({required int farmId, required String checkIn, required String checkOut, required int guests, String paymentMethod = 'cash', String? notes}) async {
+  static Future<Map<String, dynamic>> createBooking({required int farmId, required String checkIn, required String checkOut, required int guests, String paymentMethod = 'cash', String? notes, String? couponCode}) async {
     try {
       final res = await _api.post('/bookings', data: {
         'farm_id': farmId,
@@ -49,10 +49,21 @@ class FarmService {
         'guests': guests,
         'payment_method': paymentMethod,
         'notes': notes,
+        if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
       });
       return Map<String, dynamic>.from(res as Map);
     } on ApiException catch (e) {
       return {'success': false, 'message': e.message};
+    }
+  }
+
+  /// التحقق من كوبون خصم قبل الحجز (معاينة الخصم والمجموع النهائي)
+  static Future<Map<String, dynamic>> validateCoupon({required String code, required double total}) async {
+    try {
+      final res = await _api.post('/coupons/validate', data: {'code': code, 'total': total});
+      return Map<String, dynamic>.from(res as Map);
+    } on ApiException catch (e) {
+      return {'valid': false, 'message': e.message, 'discount': 0};
     }
   }
 

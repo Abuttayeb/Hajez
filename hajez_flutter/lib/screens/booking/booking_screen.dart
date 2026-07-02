@@ -20,8 +20,58 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _checking = false;
   Map<String, dynamic>? _availability;
 
+  // كوبون الخصم
+  final _couponController = TextEditingController();
+  bool _couponChecking = false;
+  Map<String, dynamic>? _coupon; // {valid, code, discount, final_total, message}
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
+  }
+
+  /// حساب المجموع ليلة بليلة: الجمعة والسبت بسعر الويكند إن وُجد
+  double _computeTotal() {
+    if (_checkIn == null || _checkOut == null) return 0;
+    final base = double.tryParse(widget.farm['price_per_night'].toString()) ?? 0.0;
+    final weekendRaw = widget.farm['price_per_night_weekend'];
+    final weekend = weekendRaw != null ? (double.tryParse(weekendRaw.toString()) ?? base) : base;
+    double total = 0;
+    for (var d = _checkIn!; d.isBefore(_checkOut!); d = d.add(const Duration(days: 1))) {
+      total += (d.weekday == DateTime.friday || d.weekday == DateTime.saturday) ? weekend : base;
+    }
+    return total;
+  }
+
+  int _weekendNights() {
+    if (_checkIn == null || _checkOut == null) return 0;
+    int n = 0;
+    for (var d = _checkIn!; d.isBefore(_checkOut!); d = d.add(const Duration(days: 1))) {
+      if (d.weekday == DateTime.friday || d.weekday == DateTime.saturday) n++;
+    }
+    return n;
+  }
+
+  void _applyCoupon() async {
+    final code = _couponController.text.trim();
+    if (code.isEmpty) return;
+    final total = _computeTotal();
+    if (total <= 0) { _showError('اختر تواريخ الحجز أولاً'); return; }
+    setState(() => _couponChecking = true);
+    final res = await FarmService.validateCoupon(code: code, total: total);
+    setState(() {
+      _couponChecking = false;
+      _coupon = res;
+    });
+    if (res['valid'] != true) _showError(res['message']?.toString() ?? 'كوبون غير صالح');
+  }
+
+  void _removeCoupon() => setState(() { _coupon = null; _couponController.clear(); });
+
   void _onDaySelected(DateTime selected, _) {
     setState(() {
+      _coupon = null; // المجموع تغيّر — أعد التحقق من الكوبون
       if (_checkIn == null || (_checkIn != null && _checkOut != null)) {
         _checkIn = selected; _checkOut = null; _availability = null;
       } else if (selected.isAfter(_checkIn!)) {
@@ -53,6 +103,7 @@ class _BookingScreenState extends State<BookingScreen> {
         checkOut: DateFormat('yyyy-MM-dd').format(_checkOut!),
         guests: _guests, paymentMethod: _paymentMethod,
         notes: _notes.isNotEmpty ? _notes : null,
+        couponCode: _coupon?['valid'] == true ? _coupon!['code']?.toString() : null,
       );
       if (res['booking'] != null) {
         if (mounted) {
@@ -71,8 +122,15 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   Widget build(BuildContext context) {
     final nights = (_checkIn != null && _checkOut != null) ? _checkOut!.difference(_checkIn!).inDays : 0;
-    final price = double.tryParse(widget.farm['price_per_night'].toString()) ?? 0.0;
-    final total = nights * price;
+    final weekendNights = _weekendNights();
+    final weekdayNights = nights - weekendNights;
+    final basePrice = double.tryParse(widget.farm['price_per_night'].toString()) ?? 0.0;
+    final weekendRaw = widget.farm['price_per_night_weekend'];
+    final weekendPrice = weekendRaw != null ? (double.tryParse(weekendRaw.toString()) ?? basePrice) : basePrice;
+    final hasWeekendPricing = weekendPrice != basePrice && weekendNights > 0;
+    final total = _computeTotal();
+    final discount = _coupon?['valid'] == true ? (double.tryParse(_coupon!['discount'].toString()) ?? 0.0) : 0.0;
+    final finalTotal = (total - discount).clamp(0, double.infinity);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: Text('حجز ${widget.farm['name']}')),
@@ -161,6 +219,38 @@ class _BookingScreenState extends State<BookingScreen> {
               const SizedBox(height: 12),
               TextField(maxLines: 3, onChanged: (v) => _notes = v,
                 decoration: const InputDecoration(labelText: 'ملاحظات (اختياري)', hintText: 'أي طلبات خاصة...', prefixIcon: Icon(Icons.note_outlined, color: AppColors.primary))),
+              const SizedBox(height: 12),
+              // حقل كوبون الخصم
+              Container(
+                padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(16)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Row(children: [Icon(Icons.local_offer_outlined, color: AppColors.primary), SizedBox(width: 8), Text('كوبون خصم', style: AppText.heading3)]),
+                  const SizedBox(height: 12),
+                  if (_coupon?['valid'] == true)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: AppColors.success.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+                      child: Row(children: [
+                        const Icon(Icons.check_circle, color: AppColors.success, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text('تم تطبيق ${_coupon!['code']} — خصم ${(double.tryParse(_coupon!['discount'].toString()) ?? 0).toStringAsFixed(0)} د.أ', style: const TextStyle(color: AppColors.success, fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+                        IconButton(onPressed: _removeCoupon, icon: const Icon(Icons.close, size: 18, color: AppColors.grey), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                      ]),
+                    )
+                  else
+                    Row(children: [
+                      Expanded(child: TextField(
+                        controller: _couponController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(hintText: 'أدخل كود الخصم', isDense: true),
+                      )),
+                      const SizedBox(width: 8),
+                      _couponChecking
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                          : TextButton(onPressed: _applyCoupon, child: const Text('تطبيق', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+                    ]),
+                ]),
+              ),
               const SizedBox(height: 24),
               if (_checkIn != null && _checkOut != null)
                 Container(
@@ -168,10 +258,17 @@ class _BookingScreenState extends State<BookingScreen> {
                   child: Column(children: [
                     _row('الوصول', DateFormat('dd/MM/yyyy').format(_checkIn!)),
                     _row('المغادرة', DateFormat('dd/MM/yyyy').format(_checkOut!)),
-                    _row('عدد الليالي', '$nights ليالٍ'),
                     _row('عدد الأشخاص', '$_guests أشخاص'),
                     const Divider(),
-                    _row('المجموع', '${total.toStringAsFixed(0)} د.أ', bold: true),
+                    if (hasWeekendPricing) ...[
+                      _row('ليالي الأسبوع ($weekdayNights × ${basePrice.toStringAsFixed(0)})', '${(weekdayNights * basePrice).toStringAsFixed(0)} د.أ'),
+                      _row('ليالي الويكند ($weekendNights × ${weekendPrice.toStringAsFixed(0)})', '${(weekendNights * weekendPrice).toStringAsFixed(0)} د.أ'),
+                    ] else
+                      _row('عدد الليالي', '$nights ليالٍ'),
+                    if (discount > 0)
+                      _row('الخصم (${_coupon!['code']})', '- ${discount.toStringAsFixed(0)} د.أ'),
+                    const Divider(),
+                    _row('المجموع', '${finalTotal.toStringAsFixed(0)} د.أ', bold: true),
                   ]),
                 ),
               const SizedBox(height: 20),

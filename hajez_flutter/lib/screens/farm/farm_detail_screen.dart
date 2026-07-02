@@ -232,6 +232,8 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
           Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
             const Text('السعر لليلة', style: AppText.small),
             Text('${_farm!['price_per_night']} د.أ', style: AppText.price),
+            if (_farm!['price_per_night_weekend'] != null && _farm!['price_per_night_weekend'].toString() != _farm!['price_per_night'].toString())
+              Text('ويكند: ${_farm!['price_per_night_weekend']} د.أ', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.grey)),
           ]),
           const SizedBox(width: 16),
           Expanded(child: ElevatedButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookingScreen(farm: _farm!))), child: const Text('احجز الآن'))),

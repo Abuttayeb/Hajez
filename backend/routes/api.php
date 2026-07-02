@@ -1,7 +1,12 @@
 <?php
 use Illuminate\Support\Facades\Artisan;
 
-Route::get('/setup', function() {
+// محمي بمفتاح سري: /api/setup?key=... (يجب تعيين SETUP_KEY في .env)
+Route::get('/setup', function(\Illuminate\Http\Request $request) {
+    $key = env('SETUP_KEY');
+    if (!$key || !hash_equals($key, (string)$request->query('key'))) {
+        abort(403, 'Forbidden');
+    }
     try {
         Artisan::call('migrate', ['--force' => true]);
         Artisan::call('db:seed', ['--force' => true]);
@@ -17,6 +22,7 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\FcmController;
+use App\Http\Controllers\Api\CouponController;
 
 Route::post('/register',[AuthController::class,'register']);
 Route::post('/login',[AuthController::class,'login']);
@@ -34,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::post('/my-bookings/{id}/cancel',[BookingController::class,'cancel']);
     Route::post('/reviews',[ReviewController::class,'store']);
     Route::post('/fcm-token', [FcmController::class, 'update']);
+    Route::post('/coupons/validate',[CouponController::class,'validateCoupon']);
 
     Route::middleware('role:owner')->group(function() {
         Route::get('/my-farms',[FarmController::class,'myFarms']);
