@@ -1,21 +1,33 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/constants.dart';
+import 'api_client.dart';
 
 class AuthService {
-  static Map<String, String> get _headers => {'Content-Type': 'application/json', 'Accept': 'application/json'};
+  static final _api = ApiClient.instance;
 
   static Future<Map<String, dynamic>> register({required String name, required String email, required String phone, required String password, required String role}) async {
-    final res = await http.post(Uri.parse('$BASE_URL/register'), headers: _headers,
-      body: jsonEncode({'name': name, 'email': email, 'phone': phone, 'password': password, 'password_confirmation': password, 'role': role}));
-    return jsonDecode(res.body);
+    try {
+      final res = await _api.post('/register', data: {
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'password': password,
+        'password_confirmation': password,
+        'role': role,
+      });
+      return Map<String, dynamic>.from(res as Map);
+    } on ApiException catch (e) {
+      return {'success': false, 'message': e.message};
+    }
   }
 
   static Future<Map<String, dynamic>> login({required String email, required String password}) async {
-    final res = await http.post(Uri.parse('$BASE_URL/login'), headers: _headers,
-      body: jsonEncode({'email': email, 'password': password}));
-    return jsonDecode(res.body);
+    try {
+      final res = await _api.post('/login', data: {'email': email, 'password': password});
+      return Map<String, dynamic>.from(res as Map);
+    } on ApiException catch (e) {
+      return {'success': false, 'message': e.message};
+    }
   }
 
   static Future<void> saveSession(String token, String role, Map<String, dynamic> user) async {
