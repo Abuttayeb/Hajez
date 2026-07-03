@@ -162,6 +162,36 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
                 Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: AppColors.warning.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.info_outline, color: AppColors.warning, size: 18), const SizedBox(width: 8), Expanded(child: Text(_farm!['rules']!, style: AppText.body.copyWith(height: 1.6)))])),
               ],
+
+              // سياسة الإلغاء والتأمين — إشارات ثقة للزبون
+              const SizedBox(height: 20),
+              const Text('الحجز والإلغاء', style: AppText.heading3),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.greyMedium)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Icon(_cancellationIcon(_farm!['cancellation_policy']), size: 18, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(_cancellationLabel(_farm!['cancellation_policy']), style: AppText.body.copyWith(height: 1.5))),
+                  ]),
+                  if (_farm!['deposit_amount'] != null) ...[
+                    const SizedBox(height: 10),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Icon(Icons.shield_outlined, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(
+                        'تأمين مسترد ${_farm!['deposit_amount']} د.أ${_farm!['deposit_notes'] != null ? ' — ${_farm!['deposit_notes']}' : ''}',
+                        style: AppText.body.copyWith(height: 1.5),
+                      )),
+                    ]),
+                  ],
+                ]),
+              ),
+
               if (amenities.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 const Text('المرافق والخدمات', style: AppText.heading3),
@@ -301,4 +331,20 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
     Icon(icon, size: 16, color: color), const SizedBox(width: 4),
     Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: AppColors.darkSecondary)),
   ]);
+
+  IconData _cancellationIcon(String? policy) {
+    switch (policy) {
+      case 'flexible': return Icons.event_available_rounded;
+      case 'strict': return Icons.event_busy_rounded;
+      default: return Icons.event_note_rounded;
+    }
+  }
+
+  String _cancellationLabel(String? policy) {
+    switch (policy) {
+      case 'flexible': return 'إلغاء مرن — استرجاع كامل حتى 24 ساعة قبل الوصول';
+      case 'strict': return 'إلغاء صارم — لا يوجد استرجاع بعد تأكيد الحجز';
+      default: return 'إلغاء متوسط — استرجاع كامل حتى 3 أيام قبل الوصول';
+    }
+  }
 }
