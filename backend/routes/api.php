@@ -75,5 +75,9 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::put('/bookings/{id}',[AdminController::class,'updateBooking']);
         Route::get('/reviews',[AdminController::class,'getReviews']);
         Route::delete('/reviews/{id}',[AdminController::class,'deleteReview']);
+        Route::get('/coupons',[AdminController::class,'getCoupons']);
+        Route::post('/coupons',[AdminController::class,'createCoupon']);
+        Route::put('/coupons/{id}',[AdminController::class,'updateCoupon']);
+        Route::delete('/coupons/{id}',[AdminController::class,'deleteCoupon']);
     });
 });
