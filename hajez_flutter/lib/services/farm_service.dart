@@ -161,9 +161,17 @@ class FarmService {
     }
   }
 
-  static Future<Map<String, dynamic>> addReview({required int bookingId, required int rating, String? comment}) async {
+  static Future<Map<String, dynamic>> addReview({required int bookingId, required int rating, String? comment, int? cleanliness, int? service, int? value, int? location}) async {
     try {
-      final res = await _api.post('/reviews', data: {'booking_id': bookingId, 'rating': rating, 'comment': comment});
+      final res = await _api.post('/reviews', data: {
+        'booking_id': bookingId,
+        'rating': rating,
+        'comment': comment,
+        if (cleanliness != null) 'cleanliness_rating': cleanliness,
+        if (service != null) 'service_rating': service,
+        if (value != null) 'value_rating': value,
+        if (location != null) 'location_rating': location,
+      });
       return Map<String, dynamic>.from(res as Map);
     } on ApiException catch (e) {
       return {'success': false, 'message': e.message};

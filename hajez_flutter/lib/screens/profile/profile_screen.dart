@@ -6,6 +6,7 @@ import '../../providers/favorites_provider.dart';
 import '../owner/owner_dashboard.dart';
 import '../favorites_screen.dart';
 import '../notifications_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -89,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _section('الحساب', [
             _item(Icons.favorite_border_rounded, 'المفضلة', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
             _item(Icons.notifications_outlined, 'الإشعارات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
-            _item(Icons.person_outline, 'تعديل الملف الشخصي', () {}),
+            _item(Icons.person_outline, 'تعديل الملف الشخصي', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen())).then((changed) { if (changed == true) _load(); })),
             _item(Icons.help_outline, 'المساعدة والدعم', () {}),
             _item(Icons.privacy_tip_outlined, 'سياسة الخصوصية', () {}),
           ]),

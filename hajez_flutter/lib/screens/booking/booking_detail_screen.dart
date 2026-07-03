@@ -37,32 +37,53 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   void _addReview() {
     int rating = 5;
+    int cleanliness = 5, service = 5, value = 5, location = 5;
     final ctrl = TextEditingController();
     showModalBottomSheet(context: context, isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => Padding(
+      builder: (_) => StatefulBuilder(builder: (context, setSheet) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('أضف تقييمك', style: AppText.heading2),
           const SizedBox(height: 16),
           RatingBar.builder(initialRating: 5, minRating: 1, itemCount: 5,
             itemBuilder: (_, __) => const Icon(Icons.star_rounded, color: AppColors.star),
             onRatingUpdate: (r) => rating = r.toInt()),
+          const SizedBox(height: 20),
+          _subRating('النظافة 🧹', cleanliness, (v) => setSheet(() => cleanliness = v)),
+          _subRating('الخدمة 🤝', service, (v) => setSheet(() => service = v)),
+          _subRating('القيمة مقابل السعر 💰', value, (v) => setSheet(() => value = v)),
+          _subRating('الموقع 📍', location, (v) => setSheet(() => location = v)),
           const SizedBox(height: 16),
           TextField(controller: ctrl, maxLines: 3, decoration: const InputDecoration(labelText: 'تعليقك (اختياري)')),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () async {
-              await FarmService.addReview(bookingId: widget.bookingId, rating: rating, comment: ctrl.text);
+              await FarmService.addReview(
+                bookingId: widget.bookingId, rating: rating, comment: ctrl.text,
+                cleanliness: cleanliness, service: service, value: value, location: location,
+              );
               if (mounted) { Navigator.pop(context); _load(); }
             },
             child: const Text('إرسال التقييم'),
           ),
           const SizedBox(height: 16),
-        ]),
-      ),
+        ])),
+      )),
     );
   }
+
+  /// صف تقييم فرعي: عنوان + 5 نجوم صغيرة
+  Widget _subRating(String label, int current, ValueChanged<int> onChanged) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.dark)),
+      Row(children: List.generate(5, (i) => GestureDetector(
+        onTap: () => onChanged(i + 1),
+        child: Icon(i < current ? Icons.star_rounded : Icons.star_border_rounded, color: AppColors.star, size: 24),
+      ))),
+    ]),
+  );
 
   @override
   Widget build(BuildContext context) {

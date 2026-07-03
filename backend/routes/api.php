@@ -36,6 +36,8 @@ Route::get('/farms/{id}/reviews',[ReviewController::class,'farmReviews']);
 Route::middleware('auth:sanctum')->group(function() {
     Route::post('/logout',[AuthController::class,'logout']);
     Route::get('/me',[AuthController::class,'me']);
+    Route::put('/profile',[AuthController::class,'updateProfile']);
+    Route::post('/change-password',[AuthController::class,'changePassword']);
     Route::post('/bookings',[BookingController::class,'store']);
     Route::get('/my-bookings',[BookingController::class,'myBookings']);
     Route::get('/my-bookings/{id}',[BookingController::class,'show']);

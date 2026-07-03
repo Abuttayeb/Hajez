@@ -48,4 +48,33 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token'); await prefs.remove('role'); await prefs.remove('user');
   }
+
+  /// تعديل الاسم والهاتف — وتحديث النسخة المحفوظة محلياً
+  static Future<Map<String, dynamic>> updateProfile({required String name, required String phone}) async {
+    try {
+      final res = await _api.put('/profile', data: {'name': name, 'phone': phone});
+      final map = Map<String, dynamic>.from(res as Map);
+      if (map['user'] != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user', jsonEncode(map['user']));
+      }
+      return map;
+    } on ApiException catch (e) {
+      return {'success': false, 'message': e.message};
+    }
+  }
+
+  /// تغيير كلمة السر (يتطلب الحالية)
+  static Future<Map<String, dynamic>> changePassword({required String currentPassword, required String newPassword}) async {
+    try {
+      final res = await _api.post('/change-password', data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'new_password_confirmation': newPassword,
+      });
+      return Map<String, dynamic>.from(res as Map);
+    } on ApiException catch (e) {
+      return {'success': false, 'message': e.message};
+    }
+  }
 }
