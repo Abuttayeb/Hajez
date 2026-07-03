@@ -3,8 +3,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
 import '../../services/farm_service.dart';
+import '../../providers/favorites_provider.dart';
 import '../booking/booking_screen.dart';
 
 class FarmDetailScreen extends StatefulWidget {
@@ -79,6 +81,21 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
       body: CustomScrollView(slivers: [
         SliverAppBar(
           expandedHeight: 300, pinned: true, backgroundColor: AppColors.primaryDark,
+          actions: [
+            Consumer<FavoritesProvider>(
+              builder: (context, fav, _) {
+                final isFav = fav.isFavorite(widget.farmId);
+                return Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.25), shape: BoxShape.circle),
+                  child: IconButton(
+                    icon: Icon(isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isFav ? AppColors.error : Colors.white),
+                    onPressed: () => fav.toggle(widget.farmId),
+                  ),
+                );
+              },
+            ),
+          ],
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(children: [
               if (rawImages.isNotEmpty)
@@ -204,6 +221,37 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
                     child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.star_rounded, size: 14, color: AppColors.star), const SizedBox(width: 3), Text(avgRating.toStringAsFixed(1), style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: AppColors.dark)), Text(' (${reviews.length})', style: const TextStyle(fontFamily: 'Cairo', color: AppColors.grey, fontSize: 12))])),
                 ]),
                 const SizedBox(height: 12),
+                // متوسطات التقييمات الفرعية
+                Builder(builder: (context) {
+                  double avg(String key) {
+                    final vals = reviews.map((r) => r[key]).where((v) => v != null).map((v) => double.tryParse(v.toString()) ?? 0).toList();
+                    return vals.isEmpty ? 0 : vals.reduce((a, b) => a + b) / vals.length;
+                  }
+                  final subs = [
+                    {'label': 'النظافة', 'value': avg('cleanliness_rating')},
+                    {'label': 'الخدمة', 'value': avg('service_rating')},
+                    {'label': 'القيمة', 'value': avg('value_rating')},
+                    {'label': 'الموقع', 'value': avg('location_rating')},
+                  ].where((s) => (s['value'] as double) > 0).toList();
+                  if (subs.isEmpty) return const SizedBox.shrink();
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(14)),
+                    child: Column(children: subs.map((s) {
+                      final v = s['value'] as double;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(children: [
+                          SizedBox(width: 60, child: Text(s['label'] as String, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppColors.dark))),
+                          Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: v / 5, minHeight: 6, backgroundColor: AppColors.greyLight, color: AppColors.star))),
+                          const SizedBox(width: 8),
+                          Text(v.toStringAsFixed(1), style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.dark)),
+                        ]),
+                      );
+                    }).toList()),
+                  );
+                }),
                 ...reviews.take(3).map((r) => Container(
                   margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(14)),
@@ -232,6 +280,8 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
           Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
             const Text('السعر لليلة', style: AppText.small),
             Text('${_farm!['price_per_night']} د.أ', style: AppText.price),
+            if (_farm!['price_per_night_weekend'] != null && _farm!['price_per_night_weekend'].toString() != _farm!['price_per_night'].toString())
+              Text('ويكند: ${_farm!['price_per_night_weekend']} د.أ', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.grey)),
           ]),
           const SizedBox(width: 16),
           Expanded(child: ElevatedButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookingScreen(farm: _farm!))), child: const Text('احجز الآن'))),

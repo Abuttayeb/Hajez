@@ -1,14 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../services/farm_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/farm_card.dart';
+import '../../providers/favorites_provider.dart';
 import '../farm/farm_detail_screen.dart';
 import '../farm/filter_screen.dart';
 import '../booking/my_bookings_screen.dart';
 import '../profile/profile_screen.dart';
+import '../notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,10 +40,27 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'البحر الميت', 'label': 'البحر الميت', 'emoji': '💧'},
   ];
 
+  int _unreadCount = 0;
+
   @override
-  void initState() { super.initState(); _loadFarms(); _loadUser(); }
+  void initState() {
+    super.initState();
+    _loadFarms();
+    _loadUser();
+    _loadUnreadCount();
+    // تحميل معرفات المفضلة مرة واحدة لتلوين القلوب
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<FavoritesProvider>().load();
+    });
+  }
 
   void _loadUser() async { final u = await AuthService.getUser(); setState(() => _user = u); }
+
+  void _loadUnreadCount() async {
+    final res = await FarmService.getUnreadCount();
+    final count = int.tryParse(res['unread_count'].toString()) ?? 0;
+    if (mounted) setState(() => _unreadCount = count);
+  }
 
   void _loadFarms() async {
     setState(() => _loading = true);
@@ -88,6 +108,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     const Text('ابحث عن وجهتك القادمة', style: TextStyle(color: AppColors.white, fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.bold)),
                   ])),
+                  // جرس الإشعارات
+                  Stack(clipBehavior: Clip.none, children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 26),
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())).then((_) => _loadUnreadCount()),
+                    ),
+                    if (_unreadCount > 0)
+                      Positioned(top: 6, left: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(10)),
+                          constraints: const BoxConstraints(minWidth: 17),
+                          child: Text('$_unreadCount', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                        )),
+                  ]),
                   LOGO_BASE64.isEmpty
                       ? const Icon(Icons.home_work_outlined, size: 50, color: Colors.white70)
                       : Image.memory(base64Decode(LOGO_BASE64), height: 55),

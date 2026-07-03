@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_theme.dart';
+import '../providers/favorites_provider.dart';
 
 class FarmCard extends StatelessWidget {
   final Map<String, dynamic> farm;
@@ -97,6 +99,26 @@ class FarmCard extends StatelessWidget {
                       Text('${reviews.length} تقييم', style: const TextStyle(fontSize: 10, fontFamily: 'Cairo', color: AppColors.grey)),
                     ],
                   ]),
+                )),
+              // زر المفضلة
+              Positioned(bottom: 8, right: 8,
+                child: Consumer<FavoritesProvider>(
+                  builder: (context, fav, _) {
+                    final farmId = int.tryParse(farm['id'].toString()) ?? -1;
+                    final isFav = fav.isFavorite(farmId);
+                    return GestureDetector(
+                      onTap: () => fav.toggle(farmId),
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), shape: BoxShape.circle),
+                        child: Icon(
+                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: isFav ? AppColors.error : AppColors.grey,
+                          size: 20,
+                        ),
+                      ),
+                    );
+                  },
                 )),
             ]),
           ),
