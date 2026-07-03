@@ -47,8 +47,37 @@
             <label class="flex items-center gap-2 text-sm font-bold text-gray-600">
                 <input type="checkbox" name="is_verified" value="1" {{ old('is_verified', $farm->is_verified) ? 'checked' : '' }}
                        class="w-4 h-4 rounded accent-primary">
-                موثّقة ✓
+                موثّقة ✓ (تظهر شارة التوثيق بالتطبيق)
             </label>
+        </div>
+
+        <hr class="border-gray-100">
+
+        <div>
+            <h3 class="font-bold text-gray-700 mb-3">سياسة الإلغاء والتأمين <span class="text-xs text-gray-400 font-normal">(إشارات ثقة تظهر للزبون بالتطبيق)</span></h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-600 mb-1">سياسة الإلغاء</label>
+                    <select name="cancellation_policy" required
+                            class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        <option value="flexible" {{ old('cancellation_policy', $farm->cancellation_policy) === 'flexible' ? 'selected' : '' }}>مرنة — إلغاء مجاني حتى 24 ساعة قبل الوصول</option>
+                        <option value="moderate" {{ old('cancellation_policy', $farm->cancellation_policy) === 'moderate' ? 'selected' : '' }}>متوسطة — إلغاء مجاني حتى 3 أيام قبل الوصول</option>
+                        <option value="strict" {{ old('cancellation_policy', $farm->cancellation_policy) === 'strict' ? 'selected' : '' }}>صارمة — لا استرجاع بعد التأكيد</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-600 mb-1">مبلغ التأمين المسترد (اختياري، د.أ)</label>
+                    <input type="number" step="0.01" name="deposit_amount" value="{{ old('deposit_amount', $farm->deposit_amount) }}"
+                           placeholder="اتركه فارغاً لو بدون تأمين"
+                           class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="block text-sm font-bold text-gray-600 mb-1">ملاحظة عن التأمين (تظهر للزبون)</label>
+                <input type="text" name="deposit_notes" value="{{ old('deposit_notes', $farm->deposit_notes) }}"
+                       placeholder="مثال: يُدفع كاش عند الوصول ويُرد عند المغادرة بعد التأكد من سلامة المكان"
+                       class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+            </div>
         </div>
 
         <div class="flex gap-3 pt-2">

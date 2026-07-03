@@ -39,6 +39,7 @@
             @php
                 $links = [
                     ['route' => 'admin.dashboard', 'icon' => '📊', 'label' => 'الداشبورد'],
+                    ['route' => 'admin.leads.index', 'icon' => '📥', 'label' => 'طلبات الملاك'],
                     ['route' => 'admin.farms.index', 'icon' => '🏡', 'label' => 'المزارع'],
                     ['route' => 'admin.bookings.index', 'icon' => '📅', 'label' => 'الحجوزات'],
                     ['route' => 'admin.coupons.index', 'icon' => '🏷️', 'label' => 'الكوبونات'],

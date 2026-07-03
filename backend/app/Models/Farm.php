@@ -10,10 +10,12 @@ class Farm extends Model
         'price_per_night','price_per_night_weekend','capacity','cover_image',
         'has_pool','is_active','is_verified','whatsapp',
         'check_in_time','check_out_time','rules','type',
+        'cancellation_policy','deposit_amount','deposit_notes',
     ];
     protected $casts = [
         'has_pool'=>'boolean','is_active'=>'boolean','is_verified'=>'boolean',
         'price_per_night'=>'decimal:2','price_per_night_weekend'=>'decimal:2',
+        'deposit_amount'=>'decimal:2',
     ];
     public function owner() { return $this->belongsTo(User::class,'user_id'); }
     public function images() { return $this->hasMany(FarmImage::class); }

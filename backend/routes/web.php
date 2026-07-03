@@ -8,10 +8,16 @@ use App\Http\Controllers\Admin\BookingsController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Admin\ReviewsController;
 use App\Http\Controllers\Admin\CouponsController;
+use App\Http\Controllers\Admin\FarmLeadsController;
+use App\Http\Controllers\Public\FarmLeadController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
 });
+
+// صفحة تسجيل مالك مزرعة عامة - بدون تسجيل دخول أو تطبيق
+Route::get('/list-your-farm', [FarmLeadController::class, 'show'])->name('public.list-your-farm');
+Route::post('/list-your-farm', [FarmLeadController::class, 'store'])->name('public.list-your-farm.submit');
 
 // تسجيل الدخول (بدون حماية)
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -23,6 +29,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // لوحة الإدارة (محمية بجلسة + صلاحية admin)
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/leads', [FarmLeadsController::class, 'index'])->name('leads.index');
+    Route::post('/leads/{lead}/status', [FarmLeadsController::class, 'updateStatus'])->name('leads.status');
+    Route::post('/leads/{lead}/notes', [FarmLeadsController::class, 'updateNotes'])->name('leads.notes');
+    Route::post('/leads/{lead}/convert', [FarmLeadsController::class, 'convert'])->name('leads.convert');
 
     Route::get('/farms', [FarmsController::class, 'index'])->name('farms.index');
     Route::get('/farms/{farm}/edit', [FarmsController::class, 'edit'])->name('farms.edit');
