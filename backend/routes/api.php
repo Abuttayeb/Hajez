@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\FcmController;
 use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\NotificationController;
 
 Route::post('/register',[AuthController::class,'register']);
 Route::post('/login',[AuthController::class,'login']);
@@ -41,6 +43,13 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::post('/reviews',[ReviewController::class,'store']);
     Route::post('/fcm-token', [FcmController::class, 'update']);
     Route::post('/coupons/validate',[CouponController::class,'validateCoupon']);
+    Route::get('/favorites',[FavoriteController::class,'index']);
+    Route::get('/favorites/ids',[FavoriteController::class,'ids']);
+    Route::post('/favorites/toggle',[FavoriteController::class,'toggle']);
+    Route::get('/notifications',[NotificationController::class,'index']);
+    Route::get('/notifications/unread-count',[NotificationController::class,'unreadCount']);
+    Route::post('/notifications/{id}/read',[NotificationController::class,'markRead']);
+    Route::post('/notifications/read-all',[NotificationController::class,'markAllRead']);
 
     Route::middleware('role:owner')->group(function() {
         Route::get('/my-farms',[FarmController::class,'myFarms']);

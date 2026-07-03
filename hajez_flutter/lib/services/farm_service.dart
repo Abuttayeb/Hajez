@@ -178,4 +178,66 @@ class FarmService {
       return <dynamic>[];
     }
   }
+
+  // ================= المفضلة =================
+
+  /// معرفات المزارع المفضلة (خفيفة لتهيئة حالة القلوب)
+  static Future<List<int>> getFavoriteIds() async {
+    try {
+      final res = await _api.get('/favorites/ids');
+      final ids = (res as Map)['ids'] as List? ?? [];
+      return ids.map((e) => int.tryParse(e.toString()) ?? 0).where((e) => e > 0).toList();
+    } on ApiException {
+      return <int>[];
+    }
+  }
+
+  /// قائمة المزارع المفضلة كاملة
+  static Future<List<dynamic>> getFavorites() async {
+    try {
+      final res = await _api.get('/favorites');
+      return (res as Map)['data'] as List? ?? <dynamic>[];
+    } on ApiException {
+      return <dynamic>[];
+    }
+  }
+
+  /// إضافة/إزالة من المفضلة. يرجع {favorited: bool, message}
+  static Future<Map<String, dynamic>> toggleFavorite(int farmId) async {
+    try {
+      final res = await _api.post('/favorites/toggle', data: {'farm_id': farmId});
+      return Map<String, dynamic>.from(res as Map);
+    } on ApiException catch (e) {
+      return {'success': false, 'message': e.message};
+    }
+  }
+
+  // ================= الإشعارات =================
+
+  /// قائمة الإشعارات + عدد غير المقروء: {data: [], unread_count: n}
+  static Future<Map<String, dynamic>> getNotifications() async {
+    try {
+      final res = await _api.get('/notifications');
+      return Map<String, dynamic>.from(res as Map);
+    } on ApiException catch (e) {
+      return {'data': [], 'unread_count': 0, 'message': e.message};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getUnreadCount() async {
+    try {
+      final res = await _api.get('/notifications/unread-count');
+      return Map<String, dynamic>.from(res as Map);
+    } on ApiException {
+      return {'unread_count': 0};
+    }
+  }
+
+  static Future<void> markNotificationRead(int id) async {
+    try { await _api.post('/notifications/$id/read'); } on ApiException { /* صامت */ }
+  }
+
+  static Future<void> markAllNotificationsRead() async {
+    try { await _api.post('/notifications/read-all'); } on ApiException { /* صامت */ }
+  }
 }

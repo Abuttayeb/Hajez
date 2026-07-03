@@ -5,6 +5,7 @@ use App\Models\Booking;
 use App\Models\Farm;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
+use App\Models\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
@@ -42,12 +43,21 @@ class BookingController extends Controller
 
         // إشعار المالك
         $owner = $farm->owner;
-        if ($owner && $owner->fcm_token) {
-            $this->sendFcmNotification(
-                $owner->fcm_token,
-                'حجز جديد! 🎉',
-                "تم حجز {$farm->name} من {$request->check_in} إلى {$request->check_out}"
-            );
+        if ($owner) {
+            AppNotification::create([
+                'user_id' => $owner->id,
+                'title' => 'حجز جديد! 🎉',
+                'body' => "تم حجز {$farm->name} من {$request->check_in} إلى {$request->check_out}",
+                'type' => 'booking',
+                'data' => ['booking_id' => $booking->id, 'farm_id' => $farm->id],
+            ]);
+            if ($owner->fcm_token) {
+                $this->sendFcmNotification(
+                    $owner->fcm_token,
+                    'حجز جديد! 🎉',
+                    "تم حجز {$farm->name} من {$request->check_in} إلى {$request->check_out}"
+                );
+            }
         }
 
         return response()->json(['message'=>'تم الحجز بنجاح','booking'=>$booking->load(['farm','user'])],201);
@@ -99,9 +109,25 @@ class BookingController extends Controller
         return response()->json(Booking::with(['user','farm'])->whereHas('farm',fn($q)=>$q->where('user_id',$request->user()->id))->latest()->get());
     }
     public function updateStatus(Request $request,$id) {
-        $booking = Booking::whereHas('farm',fn($q)=>$q->where('user_id',$request->user()->id))->findOrFail($id);
+        $booking = Booking::with(['farm','user'])->whereHas('farm',fn($q)=>$q->where('user_id',$request->user()->id))->findOrFail($id);
         $request->validate(['status'=>'required|in:confirmed,cancelled,completed']);
         $booking->update(['status'=>$request->status]);
+
+        // إشعار العميل بتغيير حالة حجزه
+        $labels = ['confirmed'=>'تم تأكيد حجزك ✅','cancelled'=>'تم إلغاء حجزك ❌','completed'=>'اكتمل حجزك 🏡'];
+        $title = $labels[$request->status] ?? 'تحديث على حجزك';
+        $body = "حجزك في {$booking->farm->name} — الحالة الجديدة: ".($request->status==='confirmed'?'مؤكد':($request->status==='cancelled'?'ملغي':'مكتمل'));
+        AppNotification::create([
+            'user_id' => $booking->user_id,
+            'title' => $title,
+            'body' => $body,
+            'type' => 'booking_status',
+            'data' => ['booking_id' => $booking->id],
+        ]);
+        if ($booking->user && $booking->user->fcm_token) {
+            $this->sendFcmNotification($booking->user->fcm_token, $title, $body);
+        }
+
         return response()->json(['message'=>'تم التحديث','booking'=>$booking]);
     }
 }

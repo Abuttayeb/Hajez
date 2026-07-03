@@ -3,8 +3,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
 import '../../services/farm_service.dart';
+import '../../providers/favorites_provider.dart';
 import '../booking/booking_screen.dart';
 
 class FarmDetailScreen extends StatefulWidget {
@@ -79,6 +81,21 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> {
       body: CustomScrollView(slivers: [
         SliverAppBar(
           expandedHeight: 300, pinned: true, backgroundColor: AppColors.primaryDark,
+          actions: [
+            Consumer<FavoritesProvider>(
+              builder: (context, fav, _) {
+                final isFav = fav.isFavorite(widget.farmId);
+                return Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.25), shape: BoxShape.circle),
+                  child: IconButton(
+                    icon: Icon(isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isFav ? AppColors.error : Colors.white),
+                    onPressed: () => fav.toggle(widget.farmId),
+                  ),
+                );
+              },
+            ),
+          ],
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(children: [
               if (rawImages.isNotEmpty)

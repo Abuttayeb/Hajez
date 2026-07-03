@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
 import '../../services/auth_service.dart';
+import '../../providers/favorites_provider.dart';
 import '../owner/owner_dashboard.dart';
+import '../favorites_screen.dart';
+import '../notifications_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,7 +35,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('نعم', style: TextStyle(color: AppColors.error))),
       ],
     ));
-    if (confirm == true) { await AuthService.logout(); if (mounted) Navigator.pushReplacementNamed(context, '/login'); }
+    if (confirm == true) {
+      await AuthService.logout();
+      if (mounted) {
+        context.read<FavoritesProvider>().clear();
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
   }
 
   @override
@@ -77,8 +87,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 12),
           ],
           _section('الحساب', [
+            _item(Icons.favorite_border_rounded, 'المفضلة', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
+            _item(Icons.notifications_outlined, 'الإشعارات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
             _item(Icons.person_outline, 'تعديل الملف الشخصي', () {}),
-            _item(Icons.notifications_outlined, 'الإشعارات', () {}),
             _item(Icons.help_outline, 'المساعدة والدعم', () {}),
             _item(Icons.privacy_tip_outlined, 'سياسة الخصوصية', () {}),
           ]),

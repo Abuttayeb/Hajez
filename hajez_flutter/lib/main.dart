@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/favorites_provider.dart';
 import 'utils/app_theme.dart';
 import 'services/fcm_service.dart';
 import 'screens/splash_screen.dart';
@@ -32,6 +33,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
+        ChangeNotifierProvider(create: (_) => FavoritesProvider()),
       ],
       child: const HajezApp(),
     ),
