@@ -47,10 +47,11 @@ return [
             'report' => false,
         ],
 
-        // تخزين مباشر داخل مجلد الدومين الفعلي (public_html/hajez)
-        // بدل storage/app/public + symlink، لأن الدومين على هذا السيرفر
-        // يقرأ من مجلد منفصل (hajez) عن مجلد كود Laravel (hajez_app)
-        // فالـ symlink العادي (storage:link) ينشأ بمكان لا يصل له المتصفح.
+        // Direct storage inside the actual live document root (public_html/hajez).
+        // On this server the app code (hajez_app) and the live domain root (hajez)
+        // are separate folders, so storage:link creates a symlink Laravel's app
+        // can see but the browser can never reach. Storing files directly under
+        // the live domain root avoids the symlink entirely.
         'direct' => [
             'driver' => 'local',
             'root' => base_path('../hajez/uploads'),
