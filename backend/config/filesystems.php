@@ -47,6 +47,19 @@ return [
             'report' => false,
         ],
 
+        // تخزين مباشر داخل مجلد الدومين الفعلي (public_html/hajez)
+        // بدل storage/app/public + symlink، لأن الدومين على هذا السيرفر
+        // يقرأ من مجلد منفصل (hajez) عن مجلد كود Laravel (hajez_app)
+        // فالـ symlink العادي (storage:link) ينشأ بمكان لا يصل له المتصفح.
+        'direct' => [
+            'driver' => 'local',
+            'root' => base_path('../hajez/uploads'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/uploads',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

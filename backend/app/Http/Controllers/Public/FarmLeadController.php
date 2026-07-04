@@ -31,7 +31,7 @@ class FarmLeadController extends Controller
         $photoPaths = [];
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $photo) {
-                $photoPaths[] = Storage::url($photo->store('farm-leads', 'public'));
+                $photoPaths[] = Storage::disk('direct')->url($photo->store('farm-leads', 'direct'));
             }
         }
 
