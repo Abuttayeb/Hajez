@@ -47,9 +47,10 @@ class FarmController extends Controller
     public function uploadImage(Request $request,$id) {
         $farm = Farm::where('user_id',$request->user()->id)->findOrFail($id);
         $request->validate(['image'=>'required|image|max:5120']);
-        $path = $request->file('image')->store('farms','public');
-        $image = $farm->images()->create(['image_path'=>Storage::url($path),'category'=>$request->category??'general','is_cover'=>$request->is_cover??false]);
-        if ($request->is_cover) $farm->update(['cover_image'=>Storage::url($path)]);
+        $path = $request->file('image')->store('farms','direct');
+        $url = Storage::disk('direct')->url($path);
+        $image = $farm->images()->create(['image_path'=>$url,'category'=>$request->category??'general','is_cover'=>$request->is_cover??false]);
+        if ($request->is_cover) $farm->update(['cover_image'=>$url]);
         return response()->json(['message'=>'تم رفع الصورة','image'=>$image]);
     }
     public function destroy(Request $request,$id) {

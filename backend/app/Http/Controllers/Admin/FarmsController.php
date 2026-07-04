@@ -34,6 +34,9 @@ class FarmsController extends Controller
             'price_per_night_weekend' => 'nullable|numeric|min:0',
             'is_active' => 'sometimes|boolean',
             'is_verified' => 'sometimes|boolean',
+            'cancellation_policy' => 'required|in:flexible,moderate,strict',
+            'deposit_amount' => 'nullable|numeric|min:0',
+            'deposit_notes' => 'nullable|string|max:255',
         ]);
         $farm->update([
             'name' => $request->name,
@@ -42,6 +45,9 @@ class FarmsController extends Controller
             'price_per_night_weekend' => $request->price_per_night_weekend,
             'is_active' => $request->boolean('is_active'),
             'is_verified' => $request->boolean('is_verified'),
+            'cancellation_policy' => $request->cancellation_policy,
+            'deposit_amount' => $request->deposit_amount,
+            'deposit_notes' => $request->deposit_notes,
         ]);
         return redirect()->route('admin.farms.index')->with('success', 'تم تحديث المزرعة');
     }

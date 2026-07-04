@@ -127,6 +127,10 @@ class FarmCard extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Expanded(child: Text(farm['name'] ?? '', style: AppText.heading3, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                if (farm['is_verified'] == true) const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Icon(Icons.verified_rounded, color: AppColors.success, size: 18),
+                ),
                 if (_isFeatured) const Icon(Icons.verified_rounded, color: Color(0xFFFFB300), size: 18),
               ]),
               const SizedBox(height: 6),
